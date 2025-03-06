@@ -136,4 +136,4 @@ select top 3 * from person
 -- kolm esimest, aga tabeli järjestus on Age ja siis Name
 select top 3 Age, Name from Person
 
--- 3tund 
+-- 3tund rida 135
