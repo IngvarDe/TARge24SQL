@@ -364,3 +364,6 @@ from Employees
 left join Department
 on Employees.DepartmentId = Department.Id
 where Employees.DepartmentId is null
+
+---rida 363
+-- 4 tund
