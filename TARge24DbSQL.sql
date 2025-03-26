@@ -633,4 +633,51 @@ declare @FirstName nvarchar(20)
 execute spGetNameById1 1, @FirstName output
 print 'Name of the employee = ' + @FirstName
 
---- 5 tund
+--- 5 tund 26.03.2025
+
+declare 
+@FirstName nvarchar(20)
+execute spGetNameById1 1, @FirstName out
+print 'Name = ' + @FirstName
+
+create proc spGetnameById2
+@Id int 
+as begin
+	return (select FirstName from Employees where Id = @Id)
+end
+
+-- tuleb veateade kuna kutsusime v'lja int-i, aga Tom on string
+declare @EmployeeName nvarchar(50)
+execute @EmployeeName = spGetNameById2 1
+print 'Name of the employee = ' + @EmployeeName
+
+-- sisseehitatud string funktsioonid
+-- see konverteerib ASCII t‰he v‰‰rtuse numbriks
+select ASCII('a')
+-- kuvab A-t‰he
+select char(65)
+
+---prindime kogu t‰hestiku v‰lja
+declare @Start int
+set @Start = 97
+while (@Start <= 122)
+begin 
+	select char (@Start)
+	set @Start = @Start + 1
+end
+
+---eemaldame t¸hjad kohad sulgudes vasakult poolt
+select ltrim('             Hello')
+
+select * from Employees
+
+--t¸hikute eemaldamine veerust
+select LTRIM(FirstName) as [First Name], MiddleName, LastName from Employees
+
+---paremalt poolt eemaldab t¸hjad stringid
+select rtrim('    Hello     --      ')
+
+-- rida 710
+-- 6 tund
+
+
