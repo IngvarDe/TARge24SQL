@@ -866,3 +866,82 @@ from EmployeesWithDates
 
 -- kui kasutame seda funktsiooni, 
 -- siis saame teada t'nase päeva vahet stringis välja tooduga
+select dbo.fnComputeAge('11/30/2010')
+
+--nr peale DOB muutujat n'itab, et mismoodi kuvada DOB-d
+select Id, Name, DateOfBirth,
+convert(nvarchar, DateOfBirth, 126) as ConvertedDOB
+from EmployeesWithDates
+
+select Id, Name, Name + ' - ' + cast(Id as nvarchar) as [Name-Id]
+from EmployeesWithDates
+
+select cast(getdate() as date) --tänane kp
+select convert(date, getdate())  --tänane kp
+
+---matemaatilised funktsioonid
+select ABS(-101.5) --abs on absoluutväärtus ja miinus võetakse ära
+select CEILING(15.2) --ümardab suurema arvu poole
+select CEILING(-15.2) --tulemus on -15 ja suurendab positiivse täisarvu suunas
+select floor(15.2) --ümardab väiksema numbri poole
+select floor(-15.2)--ümardab väiksema numbri poole e -16
+select POWER(2, 4) --hakkab korrutama 2x2x2x2, esimene nr on korrutatav
+select SQUARE(9) --antud juhul 9 ruudus
+select sqrt(81) --annab vastuse 9, ruutjuur
+
+select rand() --annab suvalise nr
+select floor(rand() * 100) --korrutab sajaga iga suvalise nr
+
+--iga kord näitab 10 suvalist nr-t
+declare @counter int
+set @counter = 1
+while (@counter <= 10)
+	begin
+		print floor(rand() * 1000)
+		set @counter = @counter + 1
+	end
+
+select round(850.556, 2) --ümardab kaks kohta peale komat, tulemus 850.560
+select round(850.556, 2, 1) --ümardab allpoole, tulemus 850.550
+select round(850.556, 1) --ümardab ülespoole ja võtab ainult esimese nr peale koma 850.600
+select round(850.556, 1, 1) --ümardab allapoole
+select round(850.556, -2) --ümardab täisnr ülesse
+select round(850.556, -1) --ümardab täisnr allapoole
+
+---
+create function dbo.CalculateAge(@DOB date)
+returns int
+as begin
+declare @Age int
+
+set @Age = DATEDIFF(YEAR, @DOB, GETDATE()) -
+	case
+		when (MONTH(@DOB) > MONTH(getdate())) or
+			 (MONTH(@DOB) > MONTH(GeTDatE()) and day(@DOB) > day(getdate()))
+			 then 1
+			 else 0
+			 end
+		return @Age
+end
+
+exec CalculateAge '08/14/2010'
+
+--arvutab välja, kui vana on isik ja võtab arvesse kuud ja päevad
+--antud juhul näitab kõike, kes on üle 36 a vanad
+select Id, Name, dbo.CalculateAge(DateOfBirth) as Age from EmployeesWithDates
+where dbo.CalculateAge(DateOfBirth) > 42
+
+---inline table valued functions
+alter table EmployeesWithDates
+add DepartmentId int
+alter table EmployeesWithDates
+add Gender nvarchar(10)
+
+select * from EmployeesWithDates
+
+-- scalare function annab mingis vahemikus olevaid andmeid, aga 
+-- inline table values ei kasuta begin ja ned funktsioone
+-- scalar annab väärtused ja inline annab tabeli
+
+
+
