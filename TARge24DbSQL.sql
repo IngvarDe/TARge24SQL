@@ -831,5 +831,38 @@ select Name, DateOfBirth, DATENAME(WEEKDAY, DateOfBirth) as [Day], --vt DoB veer
 	Year(DateOfBirth) as [Year] -- võtab DoB veerust aasta
 from EmployeesWithDates
 
--- rida 868
--- tund 7
+-- tund 7 09.04.25
+select DATEPART(WEEKDAY, '2025-01-29 12:59:30.670') --näitab nelja kuna USA nädal algab pühapäevast
+select DATEPART(month, '2025-01-29 12:59:30.670') --näitab kuu numbrit
+select dateadd(day, 20, '2025-01-29 12:59:30.670') --liidab stringis olevale kp-le 20 päeva juurde
+select dateadd(day, -20, '2025-01-29 12:59:30.670') --lahutab 20 päeva maha
+select datediff(month, '11/30/2024', '01/30/2024') --kuvab kahe stringi vahel olevat kuudevahelist aega
+select datediff(year, '11/30/2020', '01/30/2025') --kuvab kahe stringi vahel olevat aastatevahelist aega
+
+create function fnComputeAge(@DOB datetime)
+returns nvarchar(50)
+as begin
+	declare @tempdate datetime, @years int, @months int, @days int
+		select @tempdate = @DOB
+
+		select @years = datediff(year, @tempdate, getdate()) - case when (month(@DOB) > month(getdate())) or (month(@DOB)
+		= MONTH(getdate()) and day(@DOB) > day(getdate())) then 1 else 0 end
+		select @tempdate = DATEADD(year, @years, @tempdate)
+
+		select @months = datediff(MONTH, @tempdate, getdate()) - case when day(@DOB) > day(getdate()) then 1 else 0 end
+		select @tempdate = DATEADD(Month, @months, @tempdate)
+
+		select @days = datediff(day, @tempdate, getdate())
+
+	declare @Age nvarchar(50)
+		set @Age = cast(@years as nvarchar(4)) + ' Years ' + cast(@months as nvarchar(2)) + ' Months ' + CAST(@days as nvarchar(2)) + 
+		' Days old'
+	return @Age
+end
+
+--saame vaadata kasutajate vanust
+select Id, Name, DateOfBirth, dbo.fnComputeAge(DateOfBirth) as Age 
+from EmployeesWithDates
+
+-- kui kasutame seda funktsiooni, 
+-- siis saame teada t'nase päeva vahet stringis välja tooduga
