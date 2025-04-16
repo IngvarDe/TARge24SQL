@@ -943,5 +943,143 @@ select * from EmployeesWithDates
 -- inline table values ei kasuta begin ja ned funktsioone
 -- scalar annab väärtused ja inline annab tabeli
 
+create function fn_EmployeesByGender(@Gender nvarchar(10))
+returns table
+as
+return (select Id, Name, DateOfBirth, DepartmentId, Gender
+		from EmployeesWithDates
+		where Gender = @Gender)
+
+-- kõik female töötajad
+select * from fn_EmployeesByGender('female')
+
+select * from fn_EmployeesByGender('female')
+where Name = 'Pam'
+
+select * from Department
 
 
+select Name, Gender, DepartmentName
+from fn_EmployeesByGender('male') E
+join Department D on D.Id = E.DepartmentId
+
+-- inline funktsioon
+create function fn_GetEmployees()
+returns table as
+return (select Id, Name, cast(DateOfBirth as date)
+		as DOB
+		from EmployeesWithDates)
+
+select * from fn_GetEmployees()
+
+-- teha multi-state funktsioon
+-- peab defineerima uue tabeli veerud koos muutujatega
+-- Id int, Name nvarchar(20), DOB date
+-- funktsiooni nimi on fn_MS_getEmployees()
+create function fn_MS_GetEmployees()
+returns @Table Table (Id int, Name nvarchar(20), DOB date)
+as begin
+	insert into @Table
+	select Id, Name, cast(DateOfBirth as date) from EmployeesWithDates
+
+	return
+end
+
+select * from fn_MS_GetEmployees()
+
+--- inline tabeli funktsioonid on paremini töötamas kuna käsitletakse vaatena
+--- multi puhul on pm tegemist stored proceduriga ja kulutab ressurssi rohkem
+
+update fn_GetEmployees() set Name = 'Sam1' where Id = 1 -- saab muuta andmeid
+update fn_MS_GetEmployees() set Name = 'Sam 1' where Id = 1 --ei saa muuta andmeid multistate puhul
+
+-- deterministic ja non-deterministic
+select count(*) from EmployeesWithDates
+select SQUARE(3) -- kõik tehtemärgid on deterministic funktdsioonid,
+--sinna kuuluvad veel sum, avg ja square
+
+-- non-deterministic 
+select getdate()
+select CURRENT_TIMESTAMP
+select rand() --see funktsioon saab olla mõlemas kategoorias, kõik oleneb sellest
+-- kas sulgudes on 1 või ei ole midagi
+
+--loome funktsiooni
+alter function fn_GetNameById(@id int)
+returns nvarchar(30)
+with encryption
+as begin
+	return (select Name from EmployeesWithDates where Id = @id)
+end
+
+select dbo.fn_GetNameById(1)
+
+alter function fn_getEmployeeNameById(@Id int)
+returns nvarchar(20)
+with encryption
+as begin
+	return (select Name from EmployeesWithDates where Id = @Id)
+end
+
+sp_helptext fn_GetNameById
+
+--muudame ülevalpool olevat funktsiooni. 
+--Kindlasti tabeli ette panna dbo.TabeliNimi
+alter function dbo.fn_getEmployeeNameById(@Id int)
+returns nvarchar(20)
+with schemabinding
+as begin
+	return (select Name from dbo.EmployeesWithDates where Id = @Id)
+end
+
+--ei saa kustutada tabeleid ilma funktsiooni kustutamata
+drop table dbo.EmployeesWithDates
+
+--- temporary tables
+
+--- #-märgi ette panemisel saame aru, et tegemist on temp tabeliga
+--- seda tabelit saab ainult selles päringus avada
+create table #PersonDetails(Id int, Name nvarchar(20))
+
+insert into #PersonDetails values(1, 'Mike')
+insert into #PersonDetails values(2, 'John')
+insert into #PersonDetails values(3, 'Todd')
+
+select * from #PersonDetails
+
+select Name from sysobjects
+where Name like '#PersonDetails%'
+
+--- kustuta temp table
+drop table #PersonDetails
+
+create proc spCreateLocalTempTable
+as begin
+create table #PersonDetails(Id int, Name nvarchar(20))
+
+insert into #PersonDetails values(1, 'Mike')
+insert into #PersonDetails values(2, 'John')
+insert into #PersonDetails values(3, 'Todd')
+
+select * from #PersonDetails
+end
+
+exec spCreateLocalTempTable
+
+--globaalse temp tabeli tegemine
+create table ##PersonDetails(Id int, Name nvarchar(20))
+
+--Erinevused lokaalse ja globaalse ajutise tabeli osas:
+--1. Lokaalsed ajutised tabelid on ühe # märgiga, 
+--aga globaalsel on kaks tükki.
+--2. SQL server lisab suvalisi numbreid lokaalse ajutise tabeli nimesse, 
+--aga globaalse puhul seda ei ole.
+--3. Lokaalsed on nähtavad ainult selles sessioonis, 
+--mis on selle loonud, aga globaalsed on nähtavad kõikides sessioonides.
+--4. Lokaalsed ajutised tabelid on automaatselt kustutatud, 
+--kui selle loonud sessioon on kinni pandud, 
+--aga globaalsed ajutised tabelid lõpetatakse alles 
+--peale viimase ühenduse lõpetamist.
+
+-- rida 1147
+-- tund
