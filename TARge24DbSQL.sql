@@ -1081,5 +1081,83 @@ create table ##PersonDetails(Id int, Name nvarchar(20))
 --aga globaalsed ajutised tabelid lõpetatakse alles 
 --peale viimase ühenduse lõpetamist.
 
--- rida 1147
--- tund
+--  8 tund 16.04.2025
+
+--index
+create table EmployeeWithSalary
+(
+Id int primary key,
+Name nvarchar(35),
+Salary int,
+Gender nvarchar(10)
+)
+
+insert into EmployeeWithSalary values(1, 'Sam', 2500, 'Male')
+insert into EmployeeWithSalary values(2, 'Pam', 6500, 'Female')
+insert into EmployeeWithSalary values(3, 'John', 4500, 'Male')
+insert into EmployeeWithSalary values(4, 'Sara', 5500, 'Female')
+insert into EmployeeWithSalary values(5, 'Todd', 3100, 'Male')
+
+
+--Miks indeksid?
+--Indekseid kasutatakse päringute tegemisel, mis annavad meile kiiresti andmeid. 
+--Indekseid luuakse tabelites ja vaadetes. Indeks tabelis või vaates on samasugune raamatu indeksile.
+
+--Kui raamatus ei oleks indeksit ja tahaksin üles leida konkreetse peatüki, 
+--siis sa peaksid kogu raamatu läbi vaatama. 
+
+--Kui indeks on olemas, siis vaatad peatüki leheküljenumbrit ja 
+--liigud vastavale leheküljele.
+
+--Raamatuindeks aitab oluliselt kiiremini üles leida vajaliku peatüki. 
+--Sama teevad ka tabeli ja vaate indeksid serveris.
+
+--Õigete indeksite eksisteerimine lühendab oluliselt päringu tulemust. 
+--Kui indeksit ei ole, siis päring teeb kogu tabeli ülevaatuse 
+--ja seda kutsutakse Table Scan-ks ja see on halb jõudlusele.
+
+select * from EmployeeWithSalary
+where Salary > 5000 and Salary < 7000
+
+---loome indeksi, mis asetab palga kahanevasse järjestusse
+create index IX_Employee_Salary
+on EmployeeWithSalary (Salary asc)
+
+select * from EmployeeWithSalary
+
+--- indeksi kustutamine: IX_Employee_Salary
+select * from EmployeeWithSalary with(index(IX_Employee_Salary))
+select Name, Salary from EmployeeWithSalary with(index = IX_Employee_Salary)
+
+-- saame teada, et mis on selle tabeli primaarv]ti ja index
+exec sys.sp_helpindex @objname = 'EmployeeWithSalary'
+
+--saame vaadata tabelit koos selle sisuga alates väga detailsest infost
+select
+	TableName = t.name,
+	IndexName = ind.name,
+	IndexId = ind.index_id,
+	ColumnId = ic.index_column_id,
+	ColumnName = col.name,
+	ind.*,
+	ic.*,
+	col.*
+from
+	sys.indexes ind
+inner join
+	sys.index_columns ic on ind.object_id = ic.object_id and ind.index_id = ic.index_id
+inner join
+	sys.columns col on ic.object_id = col.object_id and ic.column_id = col.column_id
+inner join
+	sys.tables t on ind.object_id = t.object_id
+where
+	ind.is_primary_key = 0
+	and ind.is_unique = 0
+	and ind.is_unique_constraint = 0
+	and t.is_ms_shipped = 0
+order by 
+	t.name, ind.name, ind.index_id, ic.is_included_column, ic.key_ordinal;
+
+
+
+
