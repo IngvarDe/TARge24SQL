@@ -1158,6 +1158,67 @@ where
 order by 
 	t.name, ind.name, ind.index_id, ic.is_included_column, ic.key_ordinal;
 
+--indeski kustutamine
+drop index EmployeeWithSalary.IX_Employee_Salary
 
+---- indeksi tüübid:
+--1. Klastrites olevad
+--2. Mitte-klastris olevad
+--3. Unikaalsed
+--4. Filtreeritud
+--5. XML
+--6. Täistekst
+--7. Ruumiline
+--8. Veerusäilitav
+--9. Veergude indeksid
+--10. Välja arvatud veergudega indeksid
 
+--klastris olev indeks määrab ära tabelis oleva füüsilise järjestuse
+--ja selle tulemusel saab tabelis olla ainult üks klastris olev indeks
+
+create table EmployeeCity
+(
+Id int primary key,
+Name nvarchar(50),
+Salary int,
+Gender nvarchar(10),
+City nvarchar(50)
+)
+
+exec sp_helpindex EmployeeCity
+
+-- andmete õige järjestuse loovad klastris olevad indeksid ja kasutab selleks nr-t
+-- põhjuseks Id kasutamisel tuleneb selle primaarvõtmest
+insert into EmployeeCity values(3, 'John', 4500, 'Male', 'New York')
+insert into EmployeeCity values(1, 'Sam', 2500, 'Male', 'London')
+insert into EmployeeCity values(4, 'Sara', 5500, 'Female', 'Tokyo')
+insert into EmployeeCity values(5, 'Todd', 3100, 'Male', 'Toronto')
+insert into EmployeeCity values(2, 'Pam', 6500, 'Male', 'Sydney')
+
+-- klastris olevad indeksid dikteerivad säilitatud andmete järjestuse tabelis 
+-- ja seda saab klastrite puhul olla ainult üks
+
+select * from EmployeeCity
+
+create clustered index IX_EmployeeCity_Name
+on EmployeeCity(Name)
+
+--- annab veateate, et tabelis saab olla ainult üks klastris olev indeks
+--- kui soovid, uut indeksit luua, siis kustuta olemasolev
+
+--- saame luua ainult ühe klastris oleva indeksi tabeli peale
+--- klastris olev indeks on analoogne telefoni suunakoodile
+
+--loome composite indeksi
+--enne tuleb kõik teised klastris olevad indeksid ära kustutada
+
+create clustered index IX_Employee_Gender_Salary
+on EmployeeCity(Gender desc, Salary asc)
+
+-- kui teed select päringu sellele tabelile, siis peaksid nägema andmeid, 
+-- mis on järjestatud selliselt:
+-- Esimeseks võetakse aluseks Gender veerg kahanevas järjestuses 
+-- ja siis Salary veerg tõusvas järjestuses
+
+select * from EmployeeCity
 
