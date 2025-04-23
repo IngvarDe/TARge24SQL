@@ -1711,7 +1711,8 @@ end
 -- (nr 16 tähendab üldiseid vigu),
 -- kolmas on olek
 
---
+-- rida 1786
+-- 10 tund
 
 
 
