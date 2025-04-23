@@ -1564,75 +1564,75 @@ delete from Employees where Id = 11
 select * from EmployeeAudit
 
 --update trigger
-create trigger trEmployeeForUpdate
+alter trigger trEmployeeForUpdate
 on Employees
 for update
 as begin
-	--muutujate deklareerimine
+	-- muutujate deklareerimine
 	declare @Id int
 	declare @OldGender nvarchar(20), @NewGender nvarchar(20)
 	declare @OldSalary int, @NewSalary int
-	declare @OldDepartmentId int, @NewDepartmentId int
+	declare @OldDepartmetnId int, @NewDepartmetnId int
 	declare @OldManagerId int, @NewManagerId int
 	declare @OldFirstName nvarchar(20), @NewFirstName nvarchar(20)
 	declare @OldMiddleName nvarchar(20), @NewMiddleName nvarchar(20)
 	declare @OldLastName nvarchar(20), @NewLastName nvarchar(20)
 	declare @OldEmail nvarchar(50), @NewEmail nvarchar(50)
 
-	--muutuja, kuhu l'heb l]pptekst
+	-- muutuja, kuhu läheb lõpptekst
 	declare @AuditString nvarchar(1000)
 
-	--laeb k]ik uuendatud andmed temp table alla
+	-- laeb kõik uuendatud andmed temp table alla
 	select * into #TempTable
 	from inserted
 
-	-- k'ib l'bi k]ik andmed temp table-s
+	-- käib läbi kõik andmed temp table-s
 	while(exists(select Id from #TempTable))
 	begin
 		set @AuditString = ''
-		--selekteerib esimese rea andmed temp table-st
+		-- selekteerib esimese rea andmed temp table-st
 		select top 1 @Id = Id, @NewGender = Gender,
-		@NewSalary = Salary, @NewDepartmentId = DepartmentId,
+		@NewSalary = Salary, @NewDepartmetnId = DepartmentId,
 		@NewManagerId = ManagerId, @NewFirstName = FirstName,
 		@NewMiddleName = MiddleName, @NewLastName = LastName,
 		@NewEmail = Email
 		from #TempTable
-		--v]tab vanad andmed kustutatud tabelist
+		-- võtab vanad andmed kustutatud tabelist
 		select @OldGender = Gender,
-		@OldSalary = Salary, @OldDepartmentId = DepartmentId,
+		@OldSalary = Salary, @OldDepartmetnId = DepartmentId,
 		@OldManagerId = ManagerId, @OldFirstName = FirstName,
-		@OldMiddleName = MiddleName, @OldlastName = LastName,
+		@OldMiddleName = MiddleName, @OldLastName = LastName,
 		@OldEmail = Email
 		from deleted where Id = @Id
 
-		---loob audit stringi dünaamiliselt
-		set @AuditString = 'Employee with Id = ' + cast(@Id as nvarchar(4)) + ' changed '
+		-- loob auditi stringi dünaamiliselt
+		set @AuditString = 'Employee with Id = ' + CAST(@Id as nvarchar(4)) + ' changed '
 		if(@OldGender <> @NewGender)
 			set @AuditString = @AuditString + ' Gender from ' + @OldGender + ' to ' +
 			@NewGender
 
 		if(@OldSalary <> @NewSalary)
-			set @AuditString = @AuditString + ' Salary from ' + cast(@OldSalary as nvarchar(20))
+			set @AuditString = @AuditString + ' Salary from ' + cast(@OldSalary as nvarchar(20)) 
 			+ ' to ' + cast(@NewSalary as nvarchar(10))
 
-		if(@OldDepartmentId <> @NewDepartmentId)
-			set @AuditString = @AuditString + ' DepartmentId from ' + cast(@OldDepartmentId as nvarchar(20))
-			+ ' to ' + cast(@NewDepartmentId as nvarchar(10))
+		if(@OldDepartmetnId <> @NewDepartmetnId)
+			set @AuditString = @AuditString + ' DepartmentId from ' + cast(@OldDepartmetnId as nvarchar(20)) 
+			+ ' to ' + cast(@NewDepartmetnId as nvarchar(10))
 
 		if(@OldManagerId <> @NewManagerId)
-			set @AuditString = @AuditString + ' ManagerId from ' + cast(@OldManagerId as nvarchar(20))
+			set @AuditString = @AuditString + ' ManagerId from ' + cast(@OldManagerId as nvarchar(20)) 
 			+ ' to ' + cast(@NewManagerId as nvarchar(10))
 
 		if(@OldFirstName <> @NewFirstName)
-			set @AuditString = @AuditString + ' FirstName from ' + @OldFirstName + ' to ' +
+			set @AuditString = @AuditString + ' Firstname from ' + @OldFirstName + ' to ' +
 			@NewFirstName
 
 		if(@OldMiddleName <> @NewMiddleName)
-			set @AuditString = @AuditString + ' MiddleName from ' + @OldMiddleName + ' to ' +
+			set @AuditString = @AuditString + ' Middlename from ' + @OldMiddleName + ' to ' +
 			@NewMiddleName
 
 		if(@OldLastName <> @NewLastName)
-			set @AuditString = @AuditString + ' LastName from ' + @OldLastName + ' to ' +
+			set @AuditString = @AuditString + ' Lastname from ' + @OldLastName + ' to ' +
 			@NewLastName
 
 		if(@OldEmail <> @NewEmail)
@@ -1644,6 +1644,12 @@ as begin
 		delete from #TempTable where Id = @Id
 	end
 end
+
+update Employees set FirstName = 'test678678', Salary = 4123, MiddleName = '123'
+where Id = 10
+
+select * from Employees
+select * from EmployeeAudit
 
 
 
