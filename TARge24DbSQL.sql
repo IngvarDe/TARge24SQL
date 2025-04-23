@@ -1539,3 +1539,112 @@ insert into EmployeeAudit
 values ('New employee with Id = ' + cast(@Id as nvarchar(5)) + ' is added at '
 + CAST(GETDATE() as nvarchar(20)))
 end
+
+select * from Employees
+insert into Employees values
+(11, 'Bob', 'Blob', 'Bomb', 'Male', 3000, 1, 3, 'bob@bomb.com')
+
+select * from EmployeeAudit
+
+--delete trigger
+create trigger trEmployeeForDelete
+on Employees
+for delete
+as begin
+	declare @Id int
+	select @Id = Id from deleted
+
+	insert into EmployeeAudit
+	values('An existing employee with Id = ' + cast(@Id as nvarchar(5)) + ' is deleted at '
+	+ cast(GETDATE() as nvarchar(20)))
+end
+
+delete from Employees where Id = 11
+
+select * from EmployeeAudit
+
+--update trigger
+create trigger trEmployeeForUpdate
+on Employees
+for update
+as begin
+	--muutujate deklareerimine
+	declare @Id int
+	declare @OldGender nvarchar(20), @NewGender nvarchar(20)
+	declare @OldSalary int, @NewSalary int
+	declare @OldDepartmentId int, @NewDepartmentId int
+	declare @OldManagerId int, @NewManagerId int
+	declare @OldFirstName nvarchar(20), @NewFirstName nvarchar(20)
+	declare @OldMiddleName nvarchar(20), @NewMiddleName nvarchar(20)
+	declare @OldLastName nvarchar(20), @NewLastName nvarchar(20)
+	declare @OldEmail nvarchar(50), @NewEmail nvarchar(50)
+
+	--muutuja, kuhu l'heb l]pptekst
+	declare @AuditString nvarchar(1000)
+
+	--laeb k]ik uuendatud andmed temp table alla
+	select * into #TempTable
+	from inserted
+
+	-- k'ib l'bi k]ik andmed temp table-s
+	while(exists(select Id from #TempTable))
+	begin
+		set @AuditString = ''
+		--selekteerib esimese rea andmed temp table-st
+		select top 1 @Id = Id, @NewGender = Gender,
+		@NewSalary = Salary, @NewDepartmentId = DepartmentId,
+		@NewManagerId = ManagerId, @NewFirstName = FirstName,
+		@NewMiddleName = MiddleName, @NewLastName = LastName,
+		@NewEmail = Email
+		from #TempTable
+		--v]tab vanad andmed kustutatud tabelist
+		select @OldGender = Gender,
+		@OldSalary = Salary, @OldDepartmentId = DepartmentId,
+		@OldManagerId = ManagerId, @OldFirstName = FirstName,
+		@OldMiddleName = MiddleName, @OldlastName = LastName,
+		@OldEmail = Email
+		from deleted where Id = @Id
+
+		---loob audit stringi dünaamiliselt
+		set @AuditString = 'Employee with Id = ' + cast(@Id as nvarchar(4)) + ' changed '
+		if(@OldGender <> @NewGender)
+			set @AuditString = @AuditString + ' Gender from ' + @OldGender + ' to ' +
+			@NewGender
+
+		if(@OldSalary <> @NewSalary)
+			set @AuditString = @AuditString + ' Salary from ' + cast(@OldSalary as nvarchar(20))
+			+ ' to ' + cast(@NewSalary as nvarchar(10))
+
+		if(@OldDepartmentId <> @NewDepartmentId)
+			set @AuditString = @AuditString + ' DepartmentId from ' + cast(@OldDepartmentId as nvarchar(20))
+			+ ' to ' + cast(@NewDepartmentId as nvarchar(10))
+
+		if(@OldManagerId <> @NewManagerId)
+			set @AuditString = @AuditString + ' ManagerId from ' + cast(@OldManagerId as nvarchar(20))
+			+ ' to ' + cast(@NewManagerId as nvarchar(10))
+
+		if(@OldFirstName <> @NewFirstName)
+			set @AuditString = @AuditString + ' FirstName from ' + @OldFirstName + ' to ' +
+			@NewFirstName
+
+		if(@OldMiddleName <> @NewMiddleName)
+			set @AuditString = @AuditString + ' MiddleName from ' + @OldMiddleName + ' to ' +
+			@NewMiddleName
+
+		if(@OldLastName <> @NewLastName)
+			set @AuditString = @AuditString + ' LastName from ' + @OldLastName + ' to ' +
+			@NewLastName
+
+		if(@OldEmail <> @NewEmail)
+			set @AuditString = @AuditString + ' Email from ' + @OldEmail + ' to ' +
+			@NewEmail
+
+		insert into dbo.EmployeeAudit values (@AuditString)
+		-- kustutab temp table-st rea, et saaksime liikuda uue rea juurde
+		delete from #TempTable where Id = @Id
+	end
+end
+
+
+
+
