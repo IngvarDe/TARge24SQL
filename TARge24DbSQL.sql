@@ -1395,4 +1395,147 @@ insert into vEmployeesDataExceptSalary (Id, Gender, DepartmentId, FirstName)
 values(2, 'Female', 2, 'Pam') 
 
 --- rida 1453
---- 9 tund
+--- 9 tund 23.04.2025
+
+-- indekseeritud view
+-- MS SQL-s on indekseeritud view nime all ja
+-- Oracle-s kutsutakse materjaliseeritud view-ks
+
+create table Product 
+(
+Id int primary key,
+Name nvarchar(20),
+UnitPrice int
+)
+
+insert into Product values (1, 'Books', 20)
+insert into Product values (2, 'Pens', 14)
+insert into Product values (3, 'Pencils', 11)
+insert into Product values (4, 'Clips', 10)
+
+create table ProductSales
+(
+Id int,
+QuantitySold int
+)
+
+insert into ProductSales values(1, 10)
+insert into ProductSales values(3, 23)
+insert into ProductSales values(4, 21)
+insert into ProductSales values(2, 12)
+insert into ProductSales values(1, 13)
+insert into ProductSales values(3, 12)
+insert into ProductSales values(4, 13)
+insert into ProductSales values(1, 11)
+insert into ProductSales values(2, 12),
+(1, 14)
+
+-- loome view, mis annab meile veerud TotalSales ja TotalTransaction
+
+create view vTotalSalesByProduct
+with schemabinding
+as
+select Name,
+sum(isnull((QuantitySold * UnitPrice), 0)) as TotalSales,
+COUNT_BIG(*) as TotalTransactions
+from dbo.ProductSales
+join dbo.Product
+on dbo.Product.Id = dbo.ProductSales.Id
+group by Name
+
+--- kui soovid luua indeksi view sisse, siis peab järgima teatud reegleid
+-- 1. view tuleb luua koos schemabinding-ga
+-- 2. kui lisafunktsioon select list viitab väljendile ja selle tulemuseks
+-- võib olla NULL, siis asendusväärtus peaks olema täpsustatud. 
+-- Antud juhul kasutasime ISNULL funktsiooni asendamaks NULL väärtust
+-- 3. kui GroupBy on täpsustatud, siis view select list peab
+-- sisaldama COUNT_BIG(*) väljendit
+-- 4. Baastabelis peaksid view-d olema viidatud kahesosalise nimega
+-- e antud juhul dbo.Product ja dbo.ProductSales.
+
+select * from vTotalSalesByProduct
+
+create unique clustered index UIX_vTotalSalesByProduct_Name
+on vTotalSalesByProduct(Name)
+-- paneb selle view t'hestikulisse j'rjestusse
+
+--view piirangud
+
+create view vEmployeeDetails
+@Gender nvarchar(20)
+as
+select Id, FirstName, Gender, DepartmentId
+from Employees
+where Gender = @Gender
+--vaatesse ei saa kaasa panna parameetreid e antud juhul Gender
+
+create function fnEmployeeDetails(@Gender nvarchar(20))
+returns table
+as return
+(select Id, FirstName, Gender, DepartmentId
+from Employees where Gender = @Gender)
+--funktsioni esile kutsumine koos parameetriga
+select * from fnEmployeeDetails('male')
+
+--order by kasutamine
+-- tuleb teha view, mille nimeks on vEmployeeDetailsSorted
+-- order by-s tule kasutada Id-d
+create view vEmployeeDetailsSorted
+as
+select Id, FirstName, Gender, DepartmentId
+from Employees
+order by Id
+--view puhul ei kasutada order by-d
+
+--temp table kasutamine
+create table ##TestTempTable (Id int, FirstName nvarchar(20), Gender nvarchar(10))
+
+insert into ##TestTempTable values(101, 'Martin', 'Male')
+insert into ##TestTempTable values(102, 'Joe', 'Female')
+insert into ##TestTempTable values(103, 'Pam', 'Female')
+insert into ##TestTempTable values(104, 'James', 'Male')
+
+create view vOnTempTable
+as
+select Id, FirstName, Gender
+from ##TestTempTable
+
+--temp table-s ei saa kasutada view-d
+
+-- Triggerid
+
+--- kokku on kolme tüüpi: DML, DDL ja LOGON
+
+--- trigger on stored procedure eriliik, mis automaatselt käivitub, kui mingi tegevus 
+--- peaks andmebaasis aset leidma
+
+--- DML - data manipulation language
+--- DML-i põhilised käsklused: insert, update ja delete
+
+-- DML triggereid saab klasifitseerida  kahte tüüpi:
+-- 1. After trigger (kutsutakse ka FOR triggeriks)
+-- 2. Instead of trigger (selmet trigger e selle asemel trigger)
+
+--- after trigger käivitub peale sündmust, kui kuskil on tehtud insert, 
+--- update ja delete
+
+create table EmployeeAudit
+(
+Id int identity(1, 1) primary key,
+AuditData nvarchar(1000)
+)
+
+-- peale iga töötaja sisestamist tahame teada saada töötaja Id-d, 
+-- päeva ning aega(millal sisestati)
+-- kõik andmed tulevad EmployeeAudit tabelisse
+
+create trigger trEmployeeForInsert
+on Employees
+for insert
+as begin
+declare @Id int
+select @Id = id from inserted
+insert into EmployeeAudit
+values ('New employee with Id = ' + cast(@Id as nvarchar(5)) + ' is added at '
++ CAST(GETDATE() as nvarchar(20)))
+end
