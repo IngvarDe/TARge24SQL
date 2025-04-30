@@ -1974,4 +1974,250 @@ where Id = 1
 -- 3. kui CTE baseerub mitmel tabelil ja tahame muuta ainult ühte tabelit, siis
 -- uuendus saab tehtud
 
+--korduv CTE
+-- CTE, mis iseendale viitab, kutsutakse korduvaks CTE-ks
+-- kui tahad andmeid n'idata hierarhiliselt
 
+truncate table Employee
+
+insert into Employee values (1, 'Tom', 2)
+insert into Employee values (2, 'Josh', null)
+insert into Employee values (3, 'Mike', 2)
+insert into Employee values (4, 'John', 3)
+insert into Employee values (5, 'Pam', 1)
+insert into Employee values (6, 'Mary', 3)
+insert into Employee values (7, 'James', 1)
+insert into Employee values (8, 'Sam', 5)
+insert into Employee values (9, 'Simon', 1)
+
+-- üks võimalus on teha self join
+-- ja kuvada NULL veeru asemel Super Boss
+select Emp.Name as [Employee Name],
+ISNULL(Manager.Name, 'Super Boss') as [Manager Name]
+from dbo.Employee Emp
+left join Employee Manager
+on Emp.ManagerId = Manager.Id
+
+---
+with EmployeesCTE(Id, Name, ManagerId, [Level])
+as
+(
+	select Employee.Id, Name, ManagerId, 1
+	from Employee
+	where ManagerId is null
+
+	union all
+
+	select Employee.Id, Employee.Name,
+	Employee.ManagerId, EmployeesCTE.[Level] + 1
+	from Employee
+	join EmployeesCTE
+	on Employee.ManagerId = EmployeesCTE.Id
+)
+select EmpCTE.Name as Employee, ISNULL(MgrCTE.Name, 'Super Boss') as Manager,
+EmpCTE.[Level]
+from EmployeesCTE EmpCTE
+left join EmployeesCTE MgrCTE
+on EmpCTE.ManagerId = MgrCTE.Id
+
+--PIVOT
+create table ProductSales
+(
+SalesAgent nvarchar(50),
+SalesCountry nvarchar(50),
+SalesAmount int
+)
+
+insert into ProductSales values('Tom', 'UK', 200)
+insert into ProductSales values('John', 'US', 180)
+insert into ProductSales values('John', 'UK', 260)
+insert into ProductSales values('David', 'India', 450)
+insert into ProductSales values('Tom', 'India', 350)
+
+insert into ProductSales values('David', 'US', 200)
+insert into ProductSales values('Tom', 'US', 130)
+insert into ProductSales values('John', 'India', 540)
+insert into ProductSales values('John', 'UK', 120)
+insert into ProductSales values('David', 'UK', 220)
+
+insert into ProductSales values('John', 'UK', 420)
+insert into ProductSales values('David', 'US', 320)
+insert into ProductSales values('Tom', 'US', 340)
+insert into ProductSales values('Tom', 'UK', 660)
+insert into ProductSales values('John', 'India', 430)
+
+insert into ProductSales values('David', 'India', 230)
+insert into ProductSales values('David', 'India', 280)
+insert into ProductSales values('Tom', 'UK', 480)
+insert into ProductSales values('John', 'UK', 360)
+insert into ProductSales values('David', 'UK', 140)
+
+select * from ProductSales
+
+select SalesCountry, SalesAgent, sum(SalesAmount) as Total
+from ProductSales
+group by SalesCountry, SalesAgent
+order by SalesCountry, SalesAgent
+
+--pivot näide
+select SalesAgent, India, US, UK
+from ProductSales
+pivot
+(
+sum(SalesAmount) for SalesCountry in ([India], [US], [UK])
+)
+as PivotTable
+--- päring muudab unikaalsete veergude väärtust (India, US ja UK) SalesCountry veerus
+--- omaette veergudeks koos veergude SalesAmount liitmisega. 
+
+
+create table ProductSalesWithId
+(
+Id int primary key,
+SalesAgent nvarchar(50),
+SalesCountry nvarchar(50),
+SalesAmount int
+)
+
+insert into ProductSalesWithId values(1,'Tom', 'UK', 200)
+insert into ProductSalesWithId values(2,'John', 'US', 180)
+insert into ProductSalesWithId values(3,'John', 'UK', 260)
+insert into ProductSalesWithId values(4,'David', 'India', 450)
+insert into ProductSalesWithId values(5,'Tom', 'India', 350)
+
+insert into ProductSalesWithId values(6,'David', 'US', 200)
+insert into ProductSalesWithId values(7,'Tom', 'US', 130)
+insert into ProductSalesWithId values(8,'John', 'India', 540)
+insert into ProductSalesWithId values(9,'John', 'UK', 120)
+insert into ProductSalesWithId values(10,'David', 'UK', 220)
+
+insert into ProductSalesWithId values(11,'John', 'UK', 420)
+insert into ProductSalesWithId values(12,'David', 'US', 320)
+insert into ProductSalesWithId values(13,'Tom', 'US', 340)
+insert into ProductSalesWithId values(14,'Tom', 'UK', 660)
+insert into ProductSalesWithId values(15,'John', 'India', 430)
+
+insert into ProductSalesWithId values(16,'David', 'India', 230)
+insert into ProductSalesWithId values(17,'David', 'India', 280)
+insert into ProductSalesWithId values(18,'Tom', 'UK', 480)
+insert into ProductSalesWithId values(19,'John', 'UK', 360)
+insert into ProductSalesWithId values(20,'David', 'UK', 140)
+
+---
+select SalesAgent, India, US, UK
+from ProductSalesWithId
+pivot
+(
+	sum(SalesAmount) for SalesCountry in ([India], [US], [UK])
+)
+as PivotTable
+
+--- põhjuseks on Id veeru olemasolu ProductSalesWithId, mida võetakse arvesse
+--- pööramise ja grupeerimise järgi
+
+select SalesAgent, India, US, UK
+from
+(
+	select SalesAgent, SalesCountry, SalesAmount from ProductSalesWithId
+)
+as SourceTable
+pivot
+(
+sum(SalesAmount) for SalesCountry in (India, US, UK)
+)
+as PivotTable
+
+--UNPIVOT
+--kasutada ProductSalesWithId
+
+SELECT Id, FromAgentOrCountry, CountryOrAgent
+FROM
+(
+    select Id, SalesAgent, SalesCountry, SalesAmount
+	from ProductSalesWithId
+) as SourceTable
+UNPIVOT
+(
+   CountryOrAgent for FromAgentOrCountry in (SalesAgent, SalesCountry)
+)
+as PivotTable
+
+--- transactions
+-- transaction jälgib järgmisi samme
+-- 1. selle algus
+-- 2. käivitab DB käske
+-- 3. kontrollib vigu. Kui on viga, siis taastab algse oleku
+
+create table MailingAddress
+(
+Id int not null primary key,
+EmployeeNumber int,
+HouseNumber nvarchar(50),
+StreetAddress nvarchar(50),
+City nvarchar(10),
+PostalCode nvarchar(20)
+)
+
+insert into MailingAddress
+values(1, 101, '#10', 'King Street', 'Londoon', 'CR27DW')
+
+create table PhysicalAddress
+(
+Id int not null primary key,
+EmployeeNumber int,
+HouseNumber nvarchar(50),
+StreetAddress nvarchar(50),
+City nvarchar(10),
+PostalCode nvarchar(20)
+)
+
+insert into PhysicalAddress
+values(1, 101, '#10', 'King Street', 'Londoon', 'CR27DW')
+
+create proc spUpdateAddress
+as begin
+	begin try
+		begin transaction
+			update MailingAddress set City = 'LONDON'
+			where MailingAddress.Id = 1 and EmployeeNumber = 101
+
+			update PhysicalAddress set City = 'LONDON'
+			where PhysicalAddress.Id = 1 and EmployeeNumber = 101
+		commit transaction
+	end try
+	begin catch
+		rollback tran
+	end catch
+end
+
+spUpdateAddress
+
+select * from MailingAddress
+select * from PhysicalAddress
+
+alter proc spUpdateAddress
+as begin
+	begin try
+		begin transaction
+			update MailingAddress set City = 'LONDON 12'
+			where MailingAddress.Id = 1 and EmployeeNumber = 101
+
+			update PhysicalAddress set City = 'LONDON LONDON'
+			where PhysicalAddress.Id = 1 and EmployeeNumber = 101
+		commit transaction
+	end try
+	begin catch
+		rollback tran
+	end catch
+end
+
+spUpdateAddress
+
+select * from MailingAddress
+select * from PhysicalAddress
+
+-- kui teine uuendus ei lähe läbi, siis esimene ei lähe ka läbi
+-- kõik uuendused peavad läbi minema
+
+--rida 2323
+-- tund 11
