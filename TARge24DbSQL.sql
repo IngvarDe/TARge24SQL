@@ -1711,8 +1711,151 @@ end
 -- (nr 16 tähendab üldiseid vigu),
 -- kolmas on olek
 
--- rida 1786
--- 10 tund
+-- 10 tund  30.04.2025
+delete from Employee where Id = 6
 
+update vEmployeeDetails
+set Name = 'Johny', DepartmentName = 'IT'
+where Id = 1
+--ei saa uuendada andmeid kuna mitu tabelit on sellest mõjutatud
 
+update vEmployeeDetails
+set DepartmentName = 'HR'
+where Id = 1
+
+select * from Department
+
+create trigger tr_vEmployeeDetails_InsteadOfUpdate
+on vEmployeeDetails
+instead of update
+as begin
+
+	if(update(Id))
+	begin
+		raiserror('Id cannot be changed', 16, 1)
+		return
+	end
+
+	if(update(DepartmentName))
+	begin
+		declare @DeptId int
+		select @DeptId = Department.Id
+		from Department
+		join inserted
+		on inserted.DepartmentName = Department.DepartmentName
+
+		if(@DeptId is null)
+		begin
+			raiserror('Invalid Department Name', 16, 1)
+			return
+		end
+
+		update Employee set DepartmentId = @DeptId
+		from inserted
+		join Employee
+		on Employee.Id = inserted.id
+	end
+
+	if(update(Gender))
+	begin
+		update Employee set Gender = inserted.Gender
+		from inserted
+		join Employee
+		on Employee.Id = inserted.id
+	end
+
+	if(update(Name))
+	begin
+		update Employee set Name = inserted.Name
+		from inserted
+		join Employee
+		on Employee.Id = inserted.id
+	end
+end
+
+update Employee set Name = 'John123', Gender = 'Male', DepartmentId = 3
+where Id = 1
+
+select * from vEmployeeDetails
+
+--delete trigger
+create view vEmployeeCount
+as
+select DepartmentId, DepartmentName, count(*) as TotalEmployees
+from Employee
+join Department
+on Employee.DepartmentId = Department.Id
+group by DepartmentName, DepartmentId
+
+select * from vEmployeeCount
+
+--tahan n'ha ainult neid osakondasid, kus on kaks ja rohkem töötajaid
+--kasutada vEmployeeCount
+select DepartmentName, TotalEmployees from vEmployeeCount
+where TotalEmployees >= 2
+
+select DepartmentName, DepartmentId, count(*) as TotalEmployees
+into #TempEmployeeCount
+from Employee
+join Department
+on Employee.DepartmentId = Department.Id
+group by DepartmentName, DepartmentId
+
+select * from #TempEmployeeCount
+
+select DepartmentName, TotalEmployees
+from #TempEmployeeCount
+where TotalEmployees >= 2
+
+select * from sys.triggers
+
+create trigger trEmployeeDetails_InsteadOfDelete
+on vEmployeeDetails
+instead of delete
+as begin
+	delete Employee
+	from Employee
+	join deleted
+	on Employee.Id = deleted.Id
+end
+
+delete from vEmployeeDetails where Id = 2
+
+-- päritud tabelid ja CTE
+--CTE tähendab common table expression
+select * from Employee
+
+update Employee set Name = 'John'
+where Id = 1
+
+--CTE
+with EmployeeCount(DepartmentName, DepartmentId, TotalEmployees)
+as
+	(
+	select DepartmentName, DepartmentId, count(*) as TotalEmployees
+	from Employee
+	join Department
+	on Employee.DepartmentId = Department.Id
+	group by DepartmentName, DepartmentId
+	)
+select DepartmentName, TotalEmployees
+from EmployeeCount
+where TotalEmployees >= 2
+
+--- CTE-d võivad sarnaneda temp table-ga
+-- sarnane päritud tabelile ja ei ole salvestatud objektina
+-- ning kestab päringu ulatuses
+
+--päritud tabel
+select DepartmentName, TotalEmployees
+from
+	(
+	select DepartmentName, DepartmentId, count(*) as TotalEmployees
+	from Employee
+	join Department
+	on Employee.DepartmentId = Department.Id
+	group by DepartmentName, DepartmentId
+	)
+as EmployeeCount
+where TotalEmployees >= 2
 
