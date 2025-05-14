@@ -2385,3 +2385,13 @@ begin
 	select @RandomUnitPrice = round(((@UpperLimitForUnitPrice -
 	@LowerLimitForUnitPrice) * Rand() + @LowerLimitForUnitPrice), 0)
 
+	select @RandomQuantitySold = round(((@UpperLimitForQuantitySold -
+	@LowerLimitForQuantitySold) * Rand() + @LowerLimitForQuantitySold), 0)
+
+	insert into ProductSales
+	values(@RandomProductId, @RandomUnitPrice, @RandomQuantitySold)
+
+	print @Counter
+	set @Counter = @Counter + 1
+end
+
