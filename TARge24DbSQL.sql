@@ -2485,4 +2485,32 @@ close ProductIdCursor
 -- vabastab ressursid, mis on seotud cursoriga
 deallocate ProductIdCursor
 
+-- vaatame, kas read on uuendatud
+-- kasutate selleks join ja where: Product - 55, Product - 65, Product - 1000
+select Name, UnitPrice
+from Product join 
+ProductSales on Product.Id = ProductSales.ProductId
+where(Name = 'Product - 55' or Name = 'Product - 65' or Name = 'Product - 1000')
 
+-- asendame cursorid joiniga
+update ProductSales
+set UnitPrice = 
+	case 
+		when Name = 'Product - 55' then 155
+		when Name = 'Product - 65' then 165
+		when Name like 'Product - 1000' then 10001
+	end
+from ProductSales
+join Product 
+on Product.Id = ProductSales.ProductId
+where Name = 'Product - 55' or Name = 'Product - 65' or
+Name like 'Product - 1000'
+
+-- vaatame tulemust uuesti
+select Name, UnitPrice
+from Product join 
+ProductSales on Product.Id = ProductSales.ProductId
+where(Name = 'Product - 55' or Name = 'Product - 65' or Name = 'Product - 1000')
+
+--- rida 2630
+--- tund 13
