@@ -2560,4 +2560,80 @@ begin
 	print 'Table already exists'
 end
 
---
+-- tahame sama nimega tabelit ära kustutada ja siis uuesti luua
+-- kasutame selleks OBJECT_ID
+
+if OBJECT_ID('Employee') is not null
+begin
+	drop table Employee
+end
+create table Employee
+(
+Id int primary key,
+Name nvarchar(30),
+ManagerId int
+)
+
+alter table Employee
+add Email nvarchar(50)
+
+-- kui teha uuesti veeru kontrollimist ja loomist
+if not exists(select * from INFORMATION_SCHEMA.COLUMNS where
+COLUMN_NAME = 'Email' and TABLE_NAME = 'Employee' and TABLE_SCHEMA = 'dbo')
+begin
+	alter table Employee
+	add Email nvarchar(50)
+end
+else
+begin
+	print 'Column already exists'
+end
+
+--kontrollime, kas mingi nimega veerg on olemas
+if COL_LENGTH('Employee', 'Email') is not null
+begin
+	print 'Column already exists'
+end
+else
+begin
+	print 'Column does not exists'
+end
+
+---- MERGE
+--- tutvustati aastal 2008, mis lubab teha sisestamist, uuendamist ja kustutamist
+--- ei pea kasutama mitut käsku
+
+-- merge puhul peab alati olema vähemalt kaks tabelit:
+-- 1. algallika tabel e source table
+-- 2. sihtmärk tabel e target table
+
+-- ühendab sihttabeli lähtetabeliga ja kasutab mõlemas tabelis ühist veergu
+-- koodinäide:
+merge [TARGET] as T
+using [SOURCE] as S
+	on [JOIN_CONDITIONS]
+when matched then
+	[UPDATE_STATEMENT]
+when not matched by target then
+	[INSERT_STATEMENT]
+when not matched by source then
+	[DELETE_STATEMENT]
+
+create table StudentSource
+(
+Id int primary key,
+Name nvarchar(20)
+)
+go
+insert into StudentSource values(1, 'Mike')
+insert into StudentSource values(2, 'Sara')
+go
+create table StudentTarget
+(
+Id int primary key,
+Name nvarchar(20)
+)
+go
+insert into StudentTarget values(1, 'Mike M')
+insert into StudentTarget values(3, 'John')
+go
