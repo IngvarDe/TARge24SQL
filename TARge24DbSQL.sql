@@ -2512,5 +2512,52 @@ from Product join
 ProductSales on Product.Id = ProductSales.ProductId
 where(Name = 'Product - 55' or Name = 'Product - 65' or Name = 'Product - 1000')
 
---- rida 2630
---- tund 13
+--- tund 13 21.05.2025
+
+--tabelite info
+-- nimekiri tabelitest
+select * from SYSOBJECTS where xtype = 'C'
+
+-- IT - internal table
+-- P - stored procedure
+-- PK - primary key constraint
+-- S - system table
+-- SQ - service queue
+-- U - user table
+-- V - view
+
+select * from sys.tables
+-- nimekiri tabelitest ja view-st
+select * from INFORMATION_SCHEMA.TABLES
+
+--kui soovid erinevaid objektitüüpe vaadata, siis kasuta XTYPE süntaksit
+select distinct XTYPE from sysobjects
+
+-- annab teada, kas selle nimega tabel on juba olemas
+if not exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Employee123')
+begin
+	create table Employee123
+	(
+	Id int primary key,
+	Name nvarchar(30),
+	ManagerId int
+	)
+		print 'Table Employee123 created'
+	end
+	else
+	begin
+		print 'Table Employee already exists'
+	end
+
+--- saab kasutada ka sisseehitatud funktsiooni: OBJECT_ID()
+if OBJECT_ID('Employee') is null
+begin
+	--siia saab lisada tabeli tegemise koodi
+	print 'Table created'
+end
+else
+begin
+	print 'Table already exists'
+end
+
+--
