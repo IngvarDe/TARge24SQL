@@ -2878,5 +2878,83 @@ values(2, 'Marcus')
 
 -- DEADLOCK
 -- kui andmebaasis tekkib ummikseis
+create table TableA
+(
+Id int identity primary key,
+Name nvarchar(50)
+)
+go
+insert into TableA values('Mark')
+go
+create table TableB
+(
+Id int identity primary key,
+Name nvarchar(50)
+)
+go
+insert into TableA values('Mary')
+go
 
+-- server 1
+-- transaction
+-- samm nr 1
+begin tran
+update TableA set 
+Name = 'Mark Transaction 1' 
+where Id = 1
 
+-- samm nr 3
+update TableB set
+Name = 'Mary Transaction 1'
+where Id = 1
+
+commit tran
+
+-- server 2
+-- samm nr 2
+begin tran
+update TableA set 
+Name = 'Mark Transaction 2' 
+where Id = 1
+
+-- samm nr 4
+update TableB set
+Name = 'Mary Transaction 2'
+where Id = 1
+
+commit tran
+
+truncate table TableA
+truncate table TableB
+
+--- Kuidas SQL server tuvastab deadlocki?
+--- Lukustatakse serveri lõim, mis töötab vaikimisi iga 5 sek järel
+--- et tuvastada ummikuid. Kui leiab deadlocki, siis langeb 
+--- deadlocki intervall 5 sek-lt 100 millisekundini.
+
+--- mis juhtub deadlocki tuvastamisel
+--- Tuvastamisel lõpetab DB-mootor deadlocki ja valib ühe lõime 
+--- ohvriks. Seejärel keeratakse deadlockiohvri tehing tagasi ja 
+--- tagastatakse rakendusele viga 1205. Ohvri tehingu tagasitõmbamine
+--- vabastab kõik selle transactioni valduses olevad lukud.
+--- See võimaldab teistel transactionitel blokeringut tühistada ja
+--- edasi liikuda.
+
+--- mis on DEADLOCK_PRIORITY
+--- vaikimisi valib SQL server deadlockiohvri tehingu, mille 
+--- tagasivõtmine on kõige odavam (võtab vähem ressurssi). Seanside 
+--- prioriteeti saab muuta SET DEADLOCK_PRIORTY
+
+--- DEADLOCK_PRIORTY
+--- 1. vaikimisi on see Normali peal
+--- 2. Saab seadistada LOW, NORMAL ja HIGH peale
+--- 3. saab seadistada ka nr väärtusena -10-st kuni 10-ni
+
+--- Ohvri valimise kriteeriumid
+--- 1. Kui prioriteedid on erinevad, siis kõige madalama 
+--- tähtsusega valitakse ohvriks
+--- 2. Kui mõlemal sessioonil on sama prioriteet, siis valitakse 
+--- ohvriks transaction,
+--- mille tagasi viimine on kõige vähem ressurssi nõudev.
+--- 3. Kui mõlemal sessioonil on sama prioriteet ja sama 
+--- ressursi kulutamine, siis ohver valitakse juhuslikuse alusel
